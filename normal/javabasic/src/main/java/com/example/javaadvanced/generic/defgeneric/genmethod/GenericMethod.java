@@ -13,7 +13,7 @@ public class GenericMethod {
     public static void main(String[] args) {
         GenericMethod genericMethod = new GenericMethod();
         genericMethod.text(23, 343);
-        System.out.println(genericMethod.<String>genericMethod("Samuel", "Ok", "lance"));
+        System.out.println(genericMethod.<String>genericMethod("Samuel", "Ok", "Horo"));
         System.out.println(genericMethod.genericMethod(12, "int", 44));
     }
 }
