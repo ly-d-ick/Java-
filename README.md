@@ -1,9 +1,10 @@
 # Java进阶学习
 ## [1.泛型](#generic) 
+## [2.反射](#reflection) 
 
-## <a name="generic">一、泛型</a>
-
-> 定义：“参数化类型”，平时定义任何方法时，例如传入int x,y属于典型的形参，调用时传入的1、2就是实参，参数类型在定义的时候参数类型本身参数化，在实际调用时告诉我们传入什么类型的参数
+# <a name="generic">泛型</a>
+## 一、定义
+> “参数化类型”，平时定义任何方法时，例如传入int x,y属于典型的形参，调用时传入的1、2就是实参，参数类型在定义的时候参数类型本身参数化，在实际调用时告诉我们传入什么类型的参数
 
 ### 使用泛型的好处
 
@@ -507,4 +508,205 @@ public class GenericRaw<Object> {
 
 }
 
+```
+
+# <a name="reflection">反射</a>
+## 一、定义
+> 在运行时才知道要操作的类是什么，并且可以在运行时获取类的完整构造，并调用对应的方法。
+
+## 二、功能
+### 1.在运行时构造任意一个类的对象
+### 2.在运行时获取任意一个类所有的成员变量和方法
+### 3.在运行时调用任意一个对象的方法（属性）
+
+## 三、类加载器
+#### 在JVM中，所有类都通过类加载器加载，标志Class类的唯一性是由类加载器加上Class对象
+### 1.系统类加载器
+```	
+// 1.可以获取，当前这个类TestClassLoader就是它加载的
+ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+System.out.println(classLoader);
+
+// 2.测试当前类有哪个类加载器进行加载
+classLoader = Class.forName("com.example.javaadvanced.reflection.more.ReflectionTest")
+                .getClassLoader();
+System.out.println(classLoader);
+
+------------ result ------------
+sun.misc.Launcher$AppClassLoader@18b4aac2
+sun.misc.Launcher$AppClassLoader@18b4aac2
+```
+### 2.扩展类加载器
+```
+// 3.获取扩展类加载器，系统类加载器的父类加载器，可以获取
+classLoader = classLoader.getParent();
+System.out.println(classLoader);
+
+------------ result ------------
+sun.misc.Launcher$ExtClassLoader@45ee12a7
+```
+### 3.引导类加载器
+```
+// 4.获取引导类加载器，扩展类加载器的父类加载器，不可获取
+classLoader = classLoader.getParent();
+System.out.println(classLoader);
+
+------------ result ------------
+null
+```
+
+## 四、Class类
+#### 我们写的每一个类都可以看成一个对象，是java.lang.Class类的对象。当写完一个类的java文件，变异成class文件的时候，编译器会将这个类的对应的class对象放在class文件的末尾，保存着类的元数据信息，即构造器、属性、方法、实现的接口等，在java里都有对应的类来表示
+```
+Class是一个类，封装了当前对象所对应的类的信息
+
+获取Class类的三种方式：
+1.通过类名获取，类名.class
+Class servantClass = Servant.class;
+2.通过对象获取，对象名.getClass()
+Class servantClass2 = servant.getClass();
+3.通过全类名获取，Class.forName(全类名)
+Class servantClass3 = Class.forName("com.example.javaadvanced.reflection.Servant");
+```
+### 1.构造器Constructor
+```
+public static void testConstructor() throws Exception {
+        String className = "com.example.javaadvanced.reflection.more.Person";
+        Class<Person> clz = (Class<Person>) Class.forName(className);
+
+        System.out.println("获取Constructor对象：");
+        Constructor<Person>[] constructors = (Constructor<Person>[]) clz.getConstructors();
+        for (Constructor constructor : constructors) {
+            System.out.println(constructor);
+        }
+
+        System.out.println("获取某一个Constructor对象，需参数列表：");
+        Constructor<Person> constructor = clz.getConstructor(String.class, int.class);
+        System.out.println(constructor);
+
+        /**
+         * 初始化对象的三种方法
+         * 1、普通初始化
+         * 2、获取类的class对象，然后调用newInstance()
+         * 3、通过反射获取构造器，再调用构造器#newInstance()创建对象，代码如下
+         */
+        System.out.println("调用构造器#newInstance()创建对象：");
+        Person person = constructor.newInstance("Samuel", 999);
+        System.out.println(person.getName() + ", " + person.getAge());
+}
+
+------------ result ------------
+获取Constructor对象：
+public com.example.javaadvanced.reflection.more.Person()
+public com.example.javaadvanced.reflection.more.Person(java.lang.String,int)
+获取某一个Constructor对象，需参数列表：
+public com.example.javaadvanced.reflection.more.Person(java.lang.String,int)
+调用构造器#newInstance()创建对象：
+Samuel, 999
+```
+### 2.方法Method
+```
+public static void testMethod() throws Exception {
+        Class clz = Class.forName("com.example.javaadvanced.reflection.more.Person");
+
+        System.out.println(" ");
+        System.out.println("获取clz对应类中的所有方法，包括父类的方法，不能获取private方法。");
+        Method[] methods = clz.getMethods();
+        for (Method method : methods) {
+            System.out.print(method.getName() + "() ");
+        }
+        System.out.println(" ");
+        System.out.println("--------------------------------------");
+
+        System.out.println("获取当前类的所有方法");
+        methods = clz.getDeclaredMethods();
+        for (Method method: methods) {
+            System.out.print(method.getName() + "() ");
+        }
+        System.out.println(" ");
+        System.out.println("--------------------------------------");
+
+        System.out.println("获取指定方法，有参需带参数类型和参数列表，无参不需要写");
+        Method method = clz.getDeclaredMethod("setName", String.class);
+        System.out.println(method);
+        System.out.println("--------------------------------------");
+
+        /* Pserson#setAge的形参类型为int，用于反射，获取方法的参数写成int.class;
+        * 或把int类型改为Integer*/
+        method = clz.getDeclaredMethod("setAge", int.class);
+        System.out.println(method);
+        System.out.println("--------------------------------------");
+
+        System.out.println("调用方法，第一个参数表示执行哪个对象的方法，剩下的参数是执行方法时需要传入的参数");
+        Object object = clz.newInstance();
+        method.invoke(object, 999);
+
+        /* 调用私有方法，在调用invoke方法前必须加上setAccessible(true) */
+        method = clz.getDeclaredMethod("privateMethod");
+        System.out.println(method);
+        System.out.println("--------------------------------------");
+        System.out.println("调用私有方法");
+        method.setAccessible(true);
+        method.invoke(object);
+    }
+
+------------ result ------------
+获取clz对应类中的所有方法，包括父类的方法，不能获取private方法。
+getName() setName() getAge() setAge() wait() wait() wait() equals() toString() hashCode() getClass() notify() notifyAll()  
+--------------------------------------
+获取当前类的所有方法
+getName() setName() getAge() privateMethod() setAge()  
+--------------------------------------
+获取指定方法，有参需带参数类型和参数列表，无参不需要写
+public void com.example.javaadvanced.reflection.more.Person.setName(java.lang.String)
+--------------------------------------
+public void com.example.javaadvanced.reflection.more.Person.setAge(int)
+--------------------------------------
+调用方法，第一个参数表示执行哪个对象的方法，剩下的参数是执行方法时需要传入的参数
+set someone's age 
+private void com.example.javaadvanced.reflection.more.Person.privateMethod()
+--------------------------------------
+调用私有方法
+a private method
+```
+### 3.域Field
+```
+public static void testField() throws Exception {
+        Class clz = Class.forName("com.example.javaadvanced.reflection.more.Person");
+
+        System.out.println(" ");
+        System.out.println("获取当前类的所有字段");
+        Field[] fields = clz.getDeclaredFields();
+        for (Field field: fields) {
+            System.out.print(field.getName() + " ");
+        }
+        System.out.println();
+        System.out.println("---------------------------");
+
+        System.out.println("获取指定字段");
+        Field field = clz.getDeclaredField("name");
+        System.out.println(field.getName());
+
+        Person person = (Person) clz.getConstructor(String.class, int.class).newInstance("Cris", 888);
+        System.out.println("获取指定字段的值");
+        Object object = field.get(person);
+        System.out.println(field.getName() + " = " + object);
+
+        System.out.println("获取私有字段，须先调用setAccessible(true)");
+        field = clz.getDeclaredField("age");
+        field.setAccessible(true);
+        object = field.get(person);
+        System.out.println(field.getName() + " = " + object);
+    }
+
+------------ result ------------
+获取当前类的所有字段
+name age 
+---------------------------
+获取指定字段
+name
+获取指定字段的值
+name = Cris
+获取私有字段，须先调用setAccessible(true)
+age = 888
 ```
