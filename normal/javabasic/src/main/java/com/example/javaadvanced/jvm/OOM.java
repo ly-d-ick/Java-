@@ -13,7 +13,6 @@ public class OOM {
             if (i % 10000 == 0) {
                 System.out.println("i = " + i);
                 list.add(new Object());
-                System.out.println("test");
             }
         }
     }
